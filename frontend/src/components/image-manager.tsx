@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Checkbox } from "@/components/ui/checkbox" // Import Checkbox
 import { X, Upload, CheckCircle, AlertCircle, Trash2, Download, Eye } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -47,6 +48,7 @@ export function ImageManager({
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([])
   const [storedImages, setStoredImages] = useState<StoredImage[]>([])
+  const [selectedImages, setSelectedImages] = useState<string[]>([]) // State for selected image URLs
   const [error, setError] = useState<string | null>(null)
   const [isLoadingImages, setIsLoadingImages] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -167,7 +169,7 @@ export function ImageManager({
         setUploadProgress(0)
       }
     },
-    [uploadedImages, fetchStoredImages], // Depend on uploadFile
+    [uploadedImages, fetchStoredImages, userId], // Depend on userId for uploadFile
   )
 
   const deleteImage = async (imageUrl: string) => {
@@ -188,6 +190,7 @@ export function ImageManager({
 
       if (response.ok) {
         setStoredImages((prev) => prev.filter((img) => img.url !== imageUrl))
+        setSelectedImages((prev) => prev.filter((url) => url !== imageUrl)) // Remove from selection
         await fetchStoredImages() // Refresh count
       } else {
         const errorData = await response.json()
@@ -195,6 +198,25 @@ export function ImageManager({
       }
     } catch (error) {
       setError("Failed to delete image")
+    }
+  }
+
+  const handleDeleteSelected = async () => {
+    if (selectedImages.length === 0) return
+
+    if (!window.confirm(`Are you sure you want to delete ${selectedImages.length} selected images?`)) {
+      return
+    }
+
+    setError(null)
+    const deletePromises = selectedImages.map((url) => deleteImage(url))
+
+    try {
+      await Promise.all(deletePromises)
+      setSelectedImages([]) // Clear selection after deletion
+      await fetchStoredImages() // Re-fetch all images to ensure consistency
+    } catch (err) {
+      setError("Failed to delete some images.")
     }
   }
 
@@ -253,28 +275,25 @@ export function ImageManager({
     })
   }
 
-  // Disable buttons if user is not logged in
+  const handleImageSelect = (url: string, isChecked: boolean) => {
+    setSelectedImages((prev) => (isChecked ? [...prev, url] : prev.filter((item) => item !== url)))
+  }
+
+  const handleSelectAll = (isChecked: boolean) => {
+    if (isChecked) {
+      setSelectedImages(storedImages.map((img) => img.url))
+    } else {
+      setSelectedImages([])
+    }
+  }
+
+  const isAllSelected = storedImages.length > 0 && selectedImages.length === storedImages.length
   const isDisabled = !userId
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <div className={cn("flex items-center gap-4", className)}>
-        {showEditButton && (
-          <DialogTrigger asChild>
-            <Button
-              variant="outline"
-              className={cn(
-                "rounded-full px-8 py-2 text-lg font-medium border-gray-300 hover:bg-gray-100 bg-transparent",
-                triggerClassName,
-              )}
-              onClick={() => setActiveTab("edit")}
-              disabled={isDisabled} // Disable if no userId
-            >
-              Edit Images
-            </Button>
-          </DialogTrigger>
-        )}
-
+        {/* Swapped order: Upload Images first */}
         {showUploadButton && (
           <DialogTrigger asChild>
             <Button
@@ -287,6 +306,22 @@ export function ImageManager({
               disabled={isDisabled} // Disable if no userId
             >
               Upload Image
+            </Button>
+          </DialogTrigger>
+        )}
+
+        {showEditButton && (
+          <DialogTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn(
+                "rounded-full px-8 py-2 text-lg font-medium border-gray-300 hover:bg-gray-100 bg-transparent",
+                triggerClassName,
+              )}
+              onClick={() => setActiveTab("edit")}
+              disabled={isDisabled} // Disable if no userId
+            >
+              Edit Images
             </Button>
           </DialogTrigger>
         )}
@@ -422,58 +457,91 @@ export function ImageManager({
                   <Button onClick={() => setActiveTab("upload")}>Upload Your First Image</Button>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {storedImages.map((image, index) => (
-                    <div
-                      key={index}
-                      className="relative group bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
-                    >
-                      <div className="aspect-square overflow-hidden">
-                        <img
-                          src={image.url || "/placeholder.svg"}
-                          alt={image.filename}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-
-                      {/* Image Actions */}
-                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
-                        <div className="flex space-x-2">
-                          <Button size="sm" variant="secondary" onClick={() => window.open(image.url, "_blank")}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => {
-                              const a = document.createElement("a")
-                              a.href = image.url
-                              a.download = image.filename.split("/").pop() || "download" // Get original filename
-                              a.click()
-                            }}
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" variant="destructive" onClick={() => deleteImage(image.url)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-
-                      {/* Image Info */}
-                      <div className="p-3">
-                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                          {image.filename.split("/").pop()}
-                        </div>{" "}
-                        {/* Show only actual filename */}
-                        <div className="flex justify-between text-xs text-gray-400">
-                          <span>{formatFileSize(image.size)}</span>
-                          <span>{formatDate(image.uploadedAt)}</span>
-                        </div>
-                      </div>
+                <>
+                  <div className="flex items-center justify-between pb-2 border-b border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="select-all"
+                        checked={isAllSelected}
+                        onCheckedChange={handleSelectAll}
+                        disabled={storedImages.length === 0}
+                      />
+                      <label
+                        htmlFor="select-all"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        Select All ({selectedImages.length}/{storedImages.length})
+                      </label>
                     </div>
-                  ))}
-                </div>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleDeleteSelected}
+                      disabled={selectedImages.length === 0}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete Selected
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {storedImages.map((image, index) => (
+                      <div
+                        key={index}
+                        className="relative group bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
+                      >
+                        <Checkbox
+                          id={`image-${index}`}
+                          checked={selectedImages.includes(image.url)}
+                          onCheckedChange={(checked) => handleImageSelect(image.url, !!checked)}
+                          className="absolute top-2 left-2 z-10"
+                        />
+                        <div className="aspect-square overflow-hidden">
+                          <img
+                            src={image.url || "/placeholder.svg"}
+                            alt={image.filename}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+
+                        {/* Image Actions */}
+                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                          <div className="flex space-x-2">
+                            <Button size="sm" variant="secondary" onClick={() => window.open(image.url, "_blank")}>
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => {
+                                const a = document.createElement("a")
+                                a.href = image.url
+                                a.download = image.filename.split("/").pop() || "download" // Get original filename
+                                a.click()
+                              }}
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                            <Button size="sm" variant="destructive" onClick={() => deleteImage(image.url)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Image Info */}
+                        <div className="p-3">
+                          <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                            {image.filename.split("/").pop()}
+                          </div>{" "}
+                          {/* Show only actual filename */}
+                          <div className="flex justify-between text-xs text-gray-400">
+                            <span>{formatFileSize(image.size)}</span>
+                            <span>{formatDate(image.uploadedAt)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
               )}
             </TabsContent>
           </Tabs>

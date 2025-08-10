@@ -90,14 +90,16 @@ export default function HomePage() {
         <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold text-black mb-12 text-center">Nostlgia Life Log</h1>
 
         {/* Search Bar */}
-        <div className="relative w-full max-w-2xl mb-8">
+        <div className="relative w-full max-w-4xl mb-8">
+          {" "}
+          {/* Changed to max-w-3xl for wider */}
           <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none">
             <Search className="h-6 w-6 text-gray-400" />
           </div>
           <Input
             type="text"
             placeholder="Search your memories..."
-            className="w-full h-16 pl-16 pr-6 text-lg rounded-full border-gray-300 focus:border-gray-400 focus:ring-gray-400 bg-white"
+            className="w-full h-16 pl-16 pr-6 text-xl rounded-full bg-white shadow-md transition-shadow duration-200 focus:shadow-lg focus:ring-0 focus:border-0"
           />
         </div>
 
