@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import { Search, LogOut } from "lucide-react"
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { ImageManager } from "@/components/image-manager"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -15,13 +15,13 @@ export default function HomePage() {
   const { user, loading, signInWithGoogle, logout } = useAuth()
   const [pictureCount, setPictureCount] = useState(0)
 
-  const handleImageCountChange = (count: number) => {
-    setPictureCount(count)
-  }
-
-  const handleUploadImage = () => {
-    router.push("/upload")
-  }
+  // Wrap handleImageCountChange with useCallback
+  const handleImageCountChange = useCallback(
+    (count: number) => {
+      setPictureCount(count)
+    },
+    [setPictureCount],
+  ) // Dependency array includes setPictureCount
 
   if (loading) {
     return (
@@ -32,13 +32,13 @@ export default function HomePage() {
   }
 
   return (
-  <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
       <header className="flex justify-end items-center gap-4 p-6">
         {user ? (
           // Logged in state
           <>
-            <ImageManager onImageCountChange={handleImageCountChange} triggerClassName="z-10" />
+            <ImageManager userId={user.uid} onImageCountChange={handleImageCountChange} triggerClassName="z-10" />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Avatar className="h-12 w-12 cursor-pointer hover:ring-2 hover:ring-gray-300 transition-all">
@@ -102,10 +102,15 @@ export default function HomePage() {
         </div>
 
         {/* Picture Count (only show when logged in) */}
-        {user && (
+        {user ? (
           <div className="text-center">
             <p className="text-lg text-gray-600 mb-2">{pictureCount} pictures in the system</p>
             <p className="text-sm text-gray-500">Welcome back, {user.displayName || user.email}!</p>
+          </div>
+        ) : (
+          <div className="text-center">
+            <p className="text-lg text-gray-600 mb-2">Sign in to manage your memories.</p>
+            <p className="text-sm text-gray-500">Your personal life log awaits!</p>
           </div>
         )}
       </main>

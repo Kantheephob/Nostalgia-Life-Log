@@ -1,10 +1,18 @@
 import { list } from "@vercel/blob"
-import { NextResponse } from "next/server"
+import { NextResponse, type NextRequest } from "next/server"
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // List all blobs in the store
-    const response = await list()
+    const { searchParams } = new URL(request.url)
+    const userId = searchParams.get("userId")
+
+    if (!userId) {
+      return NextResponse.json({ error: "User ID is required to list images" }, { status: 401 })
+    }
+
+    // IMPORTANT: In a production app, verify the userId on the server using Firebase Admin SDK
+    // to ensure the user is authorized to list these images.
+    const response = await list({ prefix: `${userId}/` }) // List blobs prefixed with the user's UID
 
     return NextResponse.json({
       success: true,

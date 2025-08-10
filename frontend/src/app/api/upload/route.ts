@@ -5,9 +5,13 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     const file = formData.get("file") as File
+    const userId = formData.get("userId") as string // Get userId from form data
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 })
+    }
+    if (!userId) {
+      return NextResponse.json({ error: "User ID is required for upload" }, { status: 401 })
     }
 
     // Validate file type (images only, no GIFs)
@@ -17,7 +21,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Invalid file type. Only JPEG, PNG, WebP, and SVG images are allowed." },
         { status: 400 },
-      )
+      ) 
     }
 
     // Validate file size (max 10MB)
@@ -26,10 +30,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "File too large. Maximum size is 10MB." }, { status: 400 })
     }
 
-    // Generate unique filename with timestamp
+    // Generate unique filename with timestamp, prefixed by user ID
+    // IMPORTANT: In a production app, verify the userId on the server using Firebase Admin SDK
+    // to prevent unauthorized uploads.
     const timestamp = Date.now()
     const fileExtension = file.name.split(".").pop()
-    const filename = `${timestamp}-${Math.random().toString(36).substring(2)}.${fileExtension}`
+    const filename = `${userId}/${timestamp}-${Math.random().toString(36).substring(2)}.${fileExtension}`
 
     // Upload to Vercel Blob
     const blob = await put(filename, file, {
@@ -40,7 +46,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       url: blob.url,
-      filename: filename,
+      filename: blob.pathname, // Use blob.pathname which includes the prefix
       size: file.size,
       type: file.type,
     })
