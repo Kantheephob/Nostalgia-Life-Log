@@ -12,14 +12,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-// import { UserDebug } from "@/components/user-debug"
+import { useRouter } from "next/navigation"
 
 export default function HomePage() {
   const { user, loading, signInWithGoogle, logout } = useAuth()
   const [pictureCount, setPictureCount] = useState(0)
+  const router = useRouter()
 
   const handleUploadImage = () => {
-    // TODO: Implement image upload functionality
+    router.push("/upload")
     console.log("Upload image clicked")
   }
 
@@ -123,9 +124,6 @@ export default function HomePage() {
           </div>
         )}
       </main>
-
-      {/* Debug component - remove in production */}
-      {/* <UserDebug /> */}
     </div>
   )
 }
