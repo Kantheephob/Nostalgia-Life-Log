@@ -1,9 +1,11 @@
 "use client"
 
+import type React from "react"
+
 import { useRouter } from "next/navigation"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
-import { Search, LogOut } from "lucide-react"
+import { Search, LogOut, X } from "lucide-react"
 import { useState, useCallback } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { ImageManager } from "@/components/image-manager"
@@ -14,6 +16,7 @@ export default function HomePage() {
   const router = useRouter()
   const { user, loading, signInWithGoogle, logout } = useAuth()
   const [pictureCount, setPictureCount] = useState(0)
+  const [searchQuery, setSearchQuery] = useState("") // State for search input
 
   // Wrap handleImageCountChange with useCallback
   const handleImageCountChange = useCallback(
@@ -22,6 +25,12 @@ export default function HomePage() {
     },
     [setPictureCount],
   ) // Dependency array includes setPictureCount
+
+  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && searchQuery.trim()) {
+      router.push(`/search?query=${encodeURIComponent(searchQuery.trim())}`)
+    }
+  }
 
   if (loading) {
     return (
@@ -99,8 +108,19 @@ export default function HomePage() {
           <Input
             type="text"
             placeholder="Search your memories..."
-            className="w-full h-16 pl-16 pr-6 text-xl rounded-full bg-white shadow-md transition-shadow duration-200 focus:shadow-lg focus:ring-0 focus:border-0"
+            className="w-full h-16 pl-16 pr-12 text-xl rounded-full bg-white shadow-md transition-shadow duration-200 focus:shadow-lg focus:ring-0 focus:border-0"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={handleSearch} // Add onKeyDown handler
           />
+          {searchQuery && ( // Conditionally render the clear button
+            <button
+              onClick={() => setSearchQuery("")} // Clear the input on click
+              className="absolute inset-y-0 right-0 pr-6 flex items-center text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          )}
         </div>
 
         {/* Picture Count (only show when logged in) */}
