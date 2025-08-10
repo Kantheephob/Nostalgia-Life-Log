@@ -8,6 +8,7 @@ import { useState } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { ImageManager } from "@/components/image-manager"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Button } from "@/components/ui/button"
 
 export default function HomePage() {
   const router = useRouter()
@@ -31,7 +32,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+  <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
       <header className="flex justify-end items-center gap-4 p-6">
         {user ? (
@@ -73,12 +74,13 @@ export default function HomePage() {
           </>
         ) : (
           // Logged out state
-          <ImageManager
-            onImageCountChange={handleImageCountChange}
-            triggerClassName="z-10"
-            showEditButton={false}
-            showUploadButton={false}
-          />
+          <Button
+            onClick={signInWithGoogle}
+            variant="outline"
+            className="rounded-full px-8 py-2 text-lg font-medium border-gray-300 hover:bg-gray-100 bg-transparent z-10"
+          >
+            Login With Google
+          </Button>
         )}
       </header>
 
@@ -99,23 +101,13 @@ export default function HomePage() {
           />
         </div>
 
-        {/* Picture Count and Login Prompt */}
-        <div className="text-center">
-          <p className="text-lg text-gray-600 mb-2">{pictureCount} pictures in the system</p>
-          {user ? (
+        {/* Picture Count (only show when logged in) */}
+        {user && (
+          <div className="text-center">
+            <p className="text-lg text-gray-600 mb-2">{pictureCount} pictures in the system</p>
             <p className="text-sm text-gray-500">Welcome back, {user.displayName || user.email}!</p>
-          ) : (
-            <div className="space-y-2">
-              <p className="text-sm text-gray-500">Sign in to upload and manage your memories</p>
-              <button
-                onClick={signInWithGoogle}
-                className="text-blue-600 hover:text-blue-700 text-sm font-medium underline"
-              >
-                Login With Google
-              </button>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </main>
     </div>
   )
